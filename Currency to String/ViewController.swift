@@ -8,25 +8,36 @@
 
 import UIKit
 
-//extension Int {
-//    var array: [Int] {
-//        return Array(description).map{String($0).toInt() ?? 0}
-//    }
-//}
+extension String {
+    
+    subscript (i: Int) -> Character {
+        return self[advance(self.startIndex, i)]
+    }
+    
+    subscript (i: Int) -> String {
+        return String(self[i] as Character)
+    }
+    
+    subscript (r: Range<Int>) -> String {
+        return substringWithRange(Range(start: advance(startIndex, r.startIndex), end: advance(startIndex, r.endIndex)))
+    }
+}
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, UITextFieldDelegate {
 
     @IBOutlet weak var currencyTextField: UITextField!
-    
     @IBOutlet weak var answerLabel: UILabel!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        
-        for var i=999; i<10000; i=i+2 {
-            println(writtenNumber(i))
-        }
+        currencyTextField.delegate = self //set delegate to textfield
+    }
+    
+    func textFieldShouldReturn(currencyTextField: UITextField) -> Bool {   //delegate method
+        self.convertCurrencyButtonPressed(nil)
+        currencyTextField.resignFirstResponder()
+        return true
     }
 
     override func didReceiveMemoryWarning() {
@@ -34,52 +45,49 @@ class ViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
 
-    @IBAction func convertCurrencyButtonPressed(sender: UIButton) {
+    @IBAction func convertCurrencyButtonPressed(sender: UIButton?) {
         // Convert it to a number if it is one
-        var numberInput = currencyTextField.text as NSString
-        var amount = numberInput.doubleValue
+        var numberInput = currencyTextField.text as String
+        
+        // Remove the $ character from beginning of string
+        if (numberInput[0] == "$") {
+            var length = count(numberInput)
+            numberInput = numberInput[1...length-1]
+        }
+        var amount = (numberInput as NSString).doubleValue
         
         if (amount == 0) {
-            answerLabel.text = "zero dollars"
-        } else {
-            convertToCurrencyString(amount)
+            answerLabel.text = "Zero dollars"
+        } else if (amount > 999999999999999) {
+            // Give an alert and don't do anything else but clear the textbox
+            currencyTextField.text = ""
+            displayAlert("You have way too much money", message: "That's too large a number, try something smaller", style: .Alert)
         }
-        
-        
-//        if (currencyTextField.text.toInt() != nil ) {
-//            // It is a number but has no decimals following
-//            // Function call to convert the number to a string
-//            convertToCurrencyString(amount)
-//
-//        } else if (amount >= 0.0) {
-//            //
-//            println("amount is >= 0.0")
-//        } else {
-//            // It is not a number!
-//            displayAlert("Not A Number", message: "Pretty sure that's not a number, dude", style: .Alert)
-//        }
-        
+        else {
+            convertToCurrencyString(amount)
+            
+            // Create the fraction string
+            let wholeAndFraction = modf(amount)
+            var fraction = String(format: "%.0f", wholeAndFraction.1*100)
+            println(fraction)
+            var fractionString = " and \(fraction)/100 dollars"
+            
+            var currencyString = writtenNumber(Int(amount)) + fractionString
+            
+            currencyString = currencyString[0].capitalizedString + currencyString[1...count(currencyString)-1]
+            
+            answerLabel.text = currencyString
+        }
     }
     
     func convertToCurrencyString(amount: Double) {
         // Round the amount given so we only have 2 decimal places
-        var roundedAmount = (String(format: "%.2f", amount) as NSString).doubleValue
-        
-        // Create the fraction string
-        var integer = 0.0
-        let fraction = modf(roundedAmount, &integer)
-        var fractionString = " and \(Int(fraction*100))/100 dollars"
-        
-        //println(fractionString)
-        
-        var currencyString = writtenNumber(Int(amount)) + fractionString
-        
-        println(currencyString)
+        //var roundedAmount = (String(format: "%f", fraction) as NSString).doubleValue
     }
     
     func writtenNumber(num: Int) -> String {
         // Rules for converting to string
-        // 1. thousand = 10^3, million = 10^6, billion = 10^9, trillion = 10^12, quadrillion = 10^15, quintillion = 10^18, sextillion = 10^21
+        // 1. thousand = 10^3, million = 10^6, billion = 10^9, trillion = 10^12, quadrillion = 10^15, quintillion = 10^18
         // 2. Hyphenate all compound numbers from twenty-one through ninety-nine, but not if a zero follows (divisible by 10)
         // 3. Decimals will be written ##/100, even if 00/100
         // 4. Hundreds come after the commas
@@ -87,14 +95,13 @@ class ViewController: UIViewController {
         
         let hundred = 100
         let thousand = 1000
-        let million = 10^6
-        let billion = 10^9
-        let trillion = 10^12
-        let quadrillion = 10^15
-        let quintillion = 10^18
-        let sextillion = 10^21
-        let septillion = 10^24
+        let million = 1000000
+        let billion = 1000000000
+        let trillion = 1000000000000
+        let quadrillion = 1000000000000000
+        // Any higher and you overflow the int variable
         
+        var space = "" // In the event you have numbers or zeros following the number being worked on
         
         var numberString = ""
         
@@ -162,32 +169,34 @@ class ViewController: UIViewController {
             default:
                 numberString = writtenNumber(num/10*10) + "-" + writtenNumber(num % 10)
             }
-        } else if (num > (hundred-1) && num < thousand) {
-            // The hundreds
-            numberString = writtenNumber(num/hundred) + " hundred " + writtenNumber(num % hundred)
-        } else if (num >= thousand && num < million) {
-            // The thousands
-            numberString = writtenNumber(num/thousand) + " thousand " + writtenNumber(num % thousand)
-        } else if (num > (million - 1) && num < billion) {
-            // The millions
-            numberString = writtenNumber(num/million) + " million " + writtenNumber(num % million)
-        } else if (num > (billion - 1) && num < trillion) {
-            // The billions
-            numberString = writtenNumber(num/billion) + " billion " + writtenNumber(num % billion)
-        } else if (num > (trillion - 1) && num < quadrillion) {
-            // The trillions
-            numberString = writtenNumber(num/trillion) + " trillion " + writtenNumber(num % trillion)
-        } else if (num > (quadrillion - 1) && num < quintillion) {
-            // The quadrillions
-            numberString = writtenNumber(num/quadrillion) + " quadrillion " + writtenNumber(num % quadrillion)
-        } else if (num > (quintillion - 1) && num < sextillion) {
-            // The quintillions
-            numberString = writtenNumber(num/quintillion) + " quintillion " + writtenNumber(num % quintillion)
-        } else if (num > (sextillion - 1) && num < septillion) {
-            // The sextillions
-            numberString = writtenNumber(num/sextillion) + " sextillion " + writtenNumber(num % sextillion)
-        } else {
-            numberString = "default2"
+        }
+        // -------------- The hundreds ----------------
+        else if (num > (hundred-1) && num < thousand) {
+            if ((num % hundred) != 0) { space = " " }
+            numberString = writtenNumber(num/hundred) + " hundred" + space + writtenNumber(num % hundred)
+        }
+        // -------------- The thousands ----------------
+        else if (num > (thousand-1) && num < million) {
+            if ((num % thousand) != 0) { space = " " }
+            numberString = writtenNumber(num/thousand) + " thousand" + space + writtenNumber(num % thousand)
+        }
+        // -------------- The hundreds ----------------
+        else if (num > (million - 1) && num < billion) {
+            if ((num % million) != 0) { space = " " }
+            numberString = writtenNumber(num/million) + " million" + space + writtenNumber(num % million)
+        }
+        // -------------- The billions ----------------
+        else if (num > (billion - 1) && num < trillion) {
+            if ((num % billion) != 0) { space = " " }
+            numberString = writtenNumber(num/billion) + " billion" + space + writtenNumber(num % billion)
+        }
+        // -------------- The trillions ----------------
+        else if (num > (trillion - 1) && num < quadrillion) {
+            if ((num % trillion) != 0) { space = " " }
+            numberString = writtenNumber(num/trillion) + " trillion" + space + writtenNumber(num % trillion)
+        }
+        else {
+            numberString = "Something something something"
         }
         return numberString
     }
