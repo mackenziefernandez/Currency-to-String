@@ -64,8 +64,6 @@ class ViewController: UIViewController, UITextFieldDelegate {
             displayAlert("You have way too much money", message: "That's too large a number, try something smaller", style: .Alert)
         }
         else {
-            convertToCurrencyString(amount)
-            
             // Create the fraction string
             let wholeAndFraction = modf(amount)
             var fraction = String(format: "%.0f", wholeAndFraction.1*100)
@@ -78,11 +76,6 @@ class ViewController: UIViewController, UITextFieldDelegate {
             
             answerLabel.text = currencyString
         }
-    }
-    
-    func convertToCurrencyString(amount: Double) {
-        // Round the amount given so we only have 2 decimal places
-        //var roundedAmount = (String(format: "%f", fraction) as NSString).doubleValue
     }
     
     func writtenNumber(num: Int) -> String {
